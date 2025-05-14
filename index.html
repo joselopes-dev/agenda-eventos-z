@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Agenda eletrônica</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#B8860B">
+  <link rel="icon" href="/icons/icon-32x32.png">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+  <style>
+    html { text-size-adjust: 100%; }
+    body, html { background-color: #B8860B; }
+    .main-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+    .form-container { width: 100%; max-width: 500px; background-color: #DAA520; padding: 30px; border-radius: 10px; box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); }
+    body.dark-mode { background-color: #121212; color: #ffffff; }
+    .dark-mode .form-container { background-color: #1f1f1f; color: #ffffff; }
+    .theme-toggle { position: fixed; top: 10px; right: 10px; z-index: 1000; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <button id="themeToggle" class="btn btn-sm btn-primary theme-toggle">Alternar Tema</button>
+  <button id="installBtn" style="display: none; position: fixed; bottom: 20px; right: 20px;" class="btn btn-primary">
+    📲 Instalar App
+  </button>
+
+  <div class="container main-container">
+    <div class="form-container">
+      <h2 class="text-center mb-4">Agendar Evento</h2>
+      
+      <div id="setupForm">
+        <form id="setupPasswordForm">
+          <div class="form-group">
+            <label for="newPassword">Criar Senha de Administrador</label>
+            <input type="password" class="form-control" id="newPassword" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block mt-3">Salvar Senha</button>
+        </form>
+      </div>
+
+      <div id="loginForm" class="hidden">
+        <form id="adminLoginForm">
+          <div class="form-group">
+            <label for="password">Senha de Administrador</label>
+            <input type="password" class="form-control" id="password" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block mt-3">Entrar</button>
+        </form>
+      </div>
+
+      <div id="eventFormDiv" class="hidden">
+        <form id="eventForm">
+          <div class="form-group">
+            <label for="title">Título</label>
+            <input type="text" class="form-control" id="title" required>
+          </div>
+          <div class="form-group">
+            <label for="date">Data</label>
+            <input type="date" class="form-control" id="date" required>
+          </div>
+          <div class="form-group">
+            <label for="time">Hora</label>
+            <input type="time" class="form-control" id="time" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block mt-3">Salvar Evento</button>
+        </form>
+        <div id="successAlert" class="alert alert-success mt-3" style="display: none;">
+          Evento salvo com sucesso!
+        </div>
+        <button id="logoutBtn" class="btn btn-danger btn-block mt-3">Sair</button>
+      </div>
+
+      <a href="eventos3.html" class="btn btn-primary btn-block text-black mt-3">Ver eventos agendados</a>
+    </div>
+  </div>
+
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Controle de interface
+      const setupForm = document.getElementById('setupForm');
+      const loginForm = document.getElementById('loginForm');
+      const eventFormDiv = document.getElementById('eventFormDiv');
+      const eventForm = document.getElementById('eventForm');
+      const successAlert = document.getElementById('successAlert');
+
+      // Verificar configuração inicial
+      if (!localStorage.getItem('adminPassword')) {
+        setupForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+        eventFormDiv.classList.add('hidden');
+      } else if (sessionStorage.getItem('isAdmin')) {
+        showAdminInterface();
+      } else {
+        setupForm.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+        eventFormDiv.classList.add('hidden');
+      }
+
+      // Configurar senha
+      document.getElementById('setupPasswordForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        localStorage.setItem('adminPassword', document.getElementById('newPassword').value);
+        alert('Senha configurada!');
+        location.reload();
+      });
+
+      // Login
+      document.getElementById('adminLoginForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const password = document.getElementById('password').value;
+        if (password === localStorage.getItem('adminPassword')) {
+          sessionStorage.setItem('isAdmin', 'true');
+          showAdminInterface();
+        } else {
+          alert('Senha incorreta!');
+        }
+      });
+
+      // Logout
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        sessionStorage.removeItem('isAdmin');
+        location.reload();
+      });
+
+      // Salvar evento
+      eventForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!sessionStorage.getItem('isAdmin')) return alert('Acesso negado!');
+
+        const events = JSON.parse(localStorage.getItem('events')) || [];
+        events.push({
+          title: document.getElementById('title').value,
+          date: document.getElementById('date').value,
+          time: document.getElementById('time').value
+        });
+
+        localStorage.setItem('events', JSON.stringify(events));
+        
+        // Limpar formulário
+        eventForm.reset();
+        
+        // Mostrar feedback
+        successAlert.style.display = 'block';
+        setTimeout(() => successAlert.style.display = 'none', 3000);
+      });
+
+      function showAdminInterface() {
+        setupForm.classList.add('hidden');
+        loginForm.classList.add('hidden');
+        eventFormDiv.classList.remove('hidden');
+      }
+
+      // Tema
+      document.getElementById('themeToggle').addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+      });
+
+      // PWA
+      let installPromptEvent;
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        installPromptEvent = event;
+        document.getElementById('installBtn').style.display = 'block';
+      });
+
+      document.getElementById('installBtn').addEventListener('click', () => {
+        if (installPromptEvent) {
+          installPromptEvent.prompt();
+          installPromptEvent.userChoice.then(() => {
+            document.getElementById('installBtn').style.display = 'none';
+          });
+        }
+      });
+
+      // Service Worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => console.log('SW registrado:', reg))
+          .catch(err => console.error('Erro SW:', err));
+      }
+
+      
+    });
+  </script>
+
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js" defer></script>
+</body>
+</html>

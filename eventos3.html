@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/icons/icon-32x32.png">
+  <title>Eventos Agendados</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body { 
+      background-color: #B8860B; 
+      padding: 10px;
+    }
+    .evento { 
+      background: #DAA520; 
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+    h1 {
+      font-size: 2rem;
+    }
+    .dark-mode { 
+      background-color: #121212; 
+      color: white; 
+    }
+    .dark-mode .evento { 
+      background-color: #1f1f1f; 
+    }
+    .modal-content {
+      background-color: #DAA520;
+    }
+    .dark-mode .modal-content {
+      background-color: #1f1f1f;
+      color: white;
+    }
+
+    @media (max-width: 576px) {
+      .evento {
+        padding: 12px;
+        margin: 8px 0;
+      }
+      h1 {
+        font-size: 1.75rem;
+      }
+      h3 {
+        font-size: 1.25rem;
+      }
+      p {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+      }
+      .btn {
+        font-size: 0.9rem;
+        padding: 0.25rem 0.5rem;
+      }
+      .container-fluid {
+        padding: 0 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Modal de Edição -->
+  <div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Evento</h5>
+          <button type="button" class="close" data-dismiss="modal">
+            <span>&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="editForm">
+            <div class="form-group">
+              <label for="editTitle">Título</label>
+              <input type="text" class="form-control" id="editTitle" required>
+            </div>
+            <div class="form-group">
+              <label for="editDate">Data</label>
+              <input type="date" class="form-control" id="editDate" required>
+            </div>
+            <div class="form-group">
+              <label for="editTime">Hora</label>
+              <input type="time" class="form-control" id="editTime" required>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="saveEdit">Salvar Alterações</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <h1 class="text-center mb-3">Eventos Agendados</h1>
+    <div id="eventsList"></div>
+    <a href="index.html" class="btn btn-primary btn-block mt-3">Voltar</a>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const isAdmin = sessionStorage.getItem('isAdmin') === 'true';
+      let events = JSON.parse(localStorage.getItem('events')) || [];
+      const eventsList = document.getElementById('eventsList');
+      let currentEditIndex = null;
+
+      const loadEvents = () => {
+        eventsList.innerHTML = '';
+        events = JSON.parse(localStorage.getItem('events')) || [];
+        
+        events.forEach((event, index) => {
+          const eventDiv = document.createElement('div');
+          eventDiv.className = 'evento';
+          eventDiv.innerHTML = `
+            <h3>${event.title}</h3>
+            <p>Data: ${event.date}</p>
+            <p>Hora: ${event.time}</p>
+            ${isAdmin ? `
+              <button class="btn btn-warning btn-sm edit-btn" data-index="${index}">Editar</button>
+              <button class="btn btn-danger btn-sm delete-btn" data-index="${index}">Excluir</button>
+            ` : ''}
+          `;
+          eventsList.appendChild(eventDiv);
+        });
+
+        // Eventos de edição
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            if (!isAdmin) {
+              alert('Acesso negado!');
+              return;
+            }
+            currentEditIndex = e.target.dataset.index;
+            const event = events[currentEditIndex];
+            
+            document.getElementById('editTitle').value = event.title;
+            document.getElementById('editDate').value = event.date;
+            document.getElementById('editTime').value = event.time;
+            
+            $('#editModal').modal('show');
+          });
+        });
+
+        // Eventos de exclusão
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            if (!isAdmin) {
+              alert('Acesso negado!');
+              return;
+            }
+            if (confirm('Tem certeza que deseja excluir este evento?')) {
+              const index = e.target.dataset.index;
+              events.splice(index, 1);
+              localStorage.setItem('events', JSON.stringify(events));
+              loadEvents();
+            }
+          });
+        });
+      };
+
+      // Salvar edição
+      document.getElementById('saveEdit').addEventListener('click', () => {
+        const updatedEvent = {
+          title: document.getElementById('editTitle').value,
+          date: document.getElementById('editDate').value,
+          time: document.getElementById('editTime').value
+        };
+
+        if (currentEditIndex !== null) {
+          events[currentEditIndex] = updatedEvent;
+          localStorage.setItem('events', JSON.stringify(events));
+          loadEvents();
+          $('#editModal').modal('hide');
+          currentEditIndex = null;
+        }
+      });
+
+      loadEvents();
+    });
+  </script>
+</body>
+</html>
