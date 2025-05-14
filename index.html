@@ -2,13 +2,12 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Agenda eletrônica</title>
+  <title>Agenda Eletrônica</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#B8860B">
   <link rel="icon" href="./icon-32x32.png">
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-
   <style>
     html { text-size-adjust: 100%; }
     body, html { background-color: #B8860B; }
@@ -70,22 +69,73 @@
           Evento salvo com sucesso!
         </div>
         <button id="logoutBtn" class="btn btn-danger btn-block mt-3">Sair</button>
+        <ul id="eventList" class="list-group mt-3"></ul>
       </div>
 
       <a href="eventos3.html" class="btn btn-primary btn-block text-black mt-3">Ver eventos agendados</a>
     </div>
   </div>
 
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDfQSzpYNDqUfMTw2WE5G7yB5IB9zHHymM",
+      authDomain: "agenda-eventos-50882.firebaseapp.com",
+      projectId: "agenda-eventos-50882",
+      storageBucket: "agenda-eventos-50882.appspot.com",
+      messagingSenderId: "575452839175",
+      appId: "1:575452839175:web:c7d83d7c493e0f991719a2",
+      measurementId: "G-6LZY8GS1EG"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const eventForm = document.getElementById('eventForm');
+    const successAlert = document.getElementById('successAlert');
+    const eventList = document.getElementById('eventList');
+
+    eventForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('title').value;
+      const date = document.getElementById('date').value;
+      const time = document.getElementById('time').value;
+
+      try {
+        await addDoc(collection(db, "eventos"), { title, date, time });
+        eventForm.reset();
+        successAlert.style.display = 'block';
+        setTimeout(() => successAlert.style.display = 'none', 3000);
+      } catch (error) {
+        console.error("Erro ao adicionar evento: ", error);
+      }
+    });
+
+    const q = query(collection(db, "eventos"), orderBy("date"));
+    onSnapshot(q, (querySnapshot) => {
+      eventList.innerHTML = '';
+      querySnapshot.forEach((doc) => {
+        const event = doc.data();
+        const listItem = document.createElement('li');
+        listItem.className = 'list-group-item';
+        listItem.textContent = `${event.date} ${event.time} - ${event.title}`;
+        eventList.appendChild(listItem);
+      });
+    });
+  </script>
+
+  <!-- Scripts adicionais -->
   <script defer>
     document.addEventListener('DOMContentLoaded', () => {
-      // Controle de interface
       const setupForm = document.getElementById('setupForm');
       const loginForm = document.getElementById('loginForm');
       const eventFormDiv = document.getElementById('eventFormDiv');
       const eventForm = document.getElementById('eventForm');
       const successAlert = document.getElementById('successAlert');
 
-      // Verificar configuração inicial
       if (!localStorage.getItem('adminPassword')) {
         setupForm.classList.remove('hidden');
         loginForm.classList.add('hidden');
@@ -98,7 +148,6 @@
         eventFormDiv.classList.add('hidden');
       }
 
-      // Configurar senha
       document.getElementById('setupPasswordForm').addEventListener('submit', (e) => {
         e.preventDefault();
         localStorage.setItem('adminPassword', document.getElementById('newPassword').value);
@@ -106,7 +155,6 @@
         location.reload();
       });
 
-      // Login
       document.getElementById('adminLoginForm').addEventListener('submit', (e) => {
         e.preventDefault();
         const password = document.getElementById('password').value;
@@ -118,32 +166,9 @@
         }
       });
 
-      // Logout
       document.getElementById('logoutBtn').addEventListener('click', () => {
         sessionStorage.removeItem('isAdmin');
         location.reload();
-      });
-
-      // Salvar evento
-      eventForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (!sessionStorage.getItem('isAdmin')) return alert('Acesso negado!');
-
-        const events = JSON.parse(localStorage.getItem('events')) || [];
-        events.push({
-          title: document.getElementById('title').value,
-          date: document.getElementById('date').value,
-          time: document.getElementById('time').value
-        });
-
-        localStorage.setItem('events', JSON.stringify(events));
-        
-        // Limpar formulário
-        eventForm.reset();
-        
-        // Mostrar feedback
-        successAlert.style.display = 'block';
-        setTimeout(() => successAlert.style.display = 'none', 3000);
       });
 
       function showAdminInterface() {
@@ -152,12 +177,10 @@
         eventFormDiv.classList.remove('hidden');
       }
 
-      // Tema
       document.getElementById('themeToggle').addEventListener('click', () => {
         document.body.classList.toggle('dark-mode');
       });
 
-      // PWA
       let installPromptEvent;
       window.addEventListener('beforeinstallprompt', (event) => {
         event.preventDefault();
@@ -174,18 +197,17 @@
         }
       });
 
-      // Service Worker
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('service-worker.js')
-          .then(reg => console.log('SW registrado:', reg))
-          .catch(err => console.error('Erro SW:', err));
+          navigator.serviceWorker.register('service-worker.js')
+          .then((registration) => {
+            console.log('Service Worker registrado com sucesso:', registration);
+          })
+          .catch((error) => {
+            console.log('Falha ao registrar o Service Worker:', error);
+          });
       }
-
-      
     });
   </script>
-
-  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js" defer></script>
 </body>
 </html>
+ 
